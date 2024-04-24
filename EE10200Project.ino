@@ -1,7 +1,7 @@
 // Translating button clicks into morse code
 
 #include <LiquidCrystal.h> // So we can use LCD to display the word
-LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
+LiquidCrystal lcd(7, 8, 9, 10, 11, 12); // digital pins we're connecting to LCD
 
 const int button1 = 2;
 const int button2 = 3;
@@ -12,8 +12,8 @@ volatile int letters = 0; // # letters in word
 bool left = false; // initializing state variables for each 3 stages of the potentiometer so we can track when we change states
 bool middle = false;
 bool right = false;
-int currentLetter[4]; // string w/ every button press that we translate to a letter
-char currentWord[10]; // string w/ every letter input; max length of 10
+int currentLetter[4]; // string w/ every button press that we translate to a letter; max len 4 
+char currentWord[32]; // string w/ every letter input; max length of 32
 unsigned long lastDebounceTime = 0; // so we can debounce the button
 unsigned long debounceDelay = 100;
 
@@ -21,39 +21,36 @@ void setup() {
 
 	Serial.begin(9600);
 	Serial.println("Beginning now");
-  // set up the LCD's number of columns and rows:
-  lcd.begin(16, 2);
+  lcd.begin(16, 2); // set up the LCD's number of columns and rows:
 	pinMode(button1, INPUT);
 	pinMode(button2, INPUT);
   pinMode(ledPin, OUTPUT);
-	attachInterrupt(digitalPinToInterrupt(button1), button1Pushed, RISING); // interrupts for both buttons
-	attachInterrupt(digitalPinToInterrupt(button2), button2Pushed, RISING); 
+	attachInterrupt(digitalPinToInterrupt(button1), button1Pushed, RISING); // button1Pushed() occurs if button 1 goes from LOW --> HIGH
+	attachInterrupt(digitalPinToInterrupt(button2), button2Pushed, RISING); // button2Pushed() occurs if button 2 goes from LOW --> HIGH
 }
 
 void loop() {
-	int pwm = analogRead(potentiometer);
+	int pwm = analogRead(potentiometer); // get potentiometer reading
 	Serial.print("Potentiometer reading: ");
 	Serial.println(pwm);
-	if (pwm > 900) {
+	if (pwm > 900) { // Zone 1
 		left = true;
-		if (middle == true || right == true) {
-			// changed
+		if (middle == true || right == true) { // This means we changed zones
 			Serial.println("Word stopped");
 			middle = false;
 			right = false;
-      for (int i = 0; i < letters; i++) {
+      for (int i = 0; i < letters; i++) { // Print word to serial monitor
         Serial.println(currentWord[i]);
       }
-      for (int i = 0; i < letters; i++) {
+      for (int i = 0; i < letters; i++) { // Print word to LCD
         lcd.print(currentWord[i]);
       }
       
 		}
 	}
-	else if (pwm < 100) {
+	else if (pwm < 100) { // Zone 3
 		right = true;
-		if (left == true || middle == true) {
-			// changed
+		if (left == true || middle == true) { // This means we changed zones
 			if (chars == 0) {
 			// Word start zone
 			Serial.println("Word start");
@@ -62,29 +59,30 @@ void loop() {
 			Serial.println("Letter start");
 			left = false;
 			middle = false;
-      digitalWrite(ledPin, HIGH);
+      digitalWrite(ledPin, HIGH); // turn on LED
 		}
 	}
-	else {
+	else { // Zone 2
 		middle = true;
-		if (left == true || right == true) {
-			// changed
+		if (left == true || right == true) { // This means we changed zones
 			// Letter stop zone
 			Serial.println("Letter stop");
 			left = false;
 			right = false;
-      digitalWrite(ledPin, LOW);
+      digitalWrite(ledPin, LOW); // turn off LED
       
       // If there's less than 4 inputs, fill them with 0's to act as null chars
       while (chars < 4) {
         currentLetter[chars] = 0;
         chars++;
       }
+
       for (int i = 0; i < 4; i++) {
-        Serial.println(currentLetter[i]);
+        Serial.println(currentLetter[i]); // Print out our array to serial monitor
       }
       char letter;
-      // Determine what letter the string is letter by letter 
+
+      // Compare our string to morse code and see what letter it is
       if (currentLetter[0] == 1) { // Codes that start wtih dot
         if (currentLetter[1] == 1) { // Dot, dot
           if (currentLetter[2] == 1) { // Dot, dot, dot
@@ -190,7 +188,7 @@ void loop() {
         }
       }
 
-      currentWord[letters] = letter;
+      currentWord[letters] = letter; // append word array with the letter we just determined
       letters++;
       for (int i = 0; i < 4; i++) {
         currentLetter[i] = 0; // Reset currentLetter array
@@ -198,13 +196,14 @@ void loop() {
       chars = 0; // Reset character counter
 		}
 	}
+  Serial.println("You have 5 seconds to move the dial.");
 	delay(5000); // 5 second delay between reads to give us time to move the dial to where we want it
 }
 void button1Pushed() {
-  if (millis() - lastDebounceTime > debounceDelay) {
-    if (right == true) {
+  if (millis() - lastDebounceTime > debounceDelay) { // Debounce the button
+    if (right == true) { // make sure we're in zone 3
       Serial.println("Button 1 pushed");
-      currentLetter[chars] = 1;
+      currentLetter[chars] = 1; // append letter string with a 1
       Serial.println(currentLetter[chars]);
       chars++;
 	  }
@@ -212,10 +211,10 @@ void button1Pushed() {
   }
 }
 void button2Pushed() {
-  if (millis() - lastDebounceTime > debounceDelay) {
-    if (right == true) {
+  if (millis() - lastDebounceTime > debounceDelay) { // Debounce the button
+    if (right == true) { // make sure we're in zone 3
       Serial.println("Button 2 pushed");
-      currentLetter[chars] = 2;
+      currentLetter[chars] = 2; // append letter string with a 2
       Serial.println(currentLetter[chars]);
       chars++;
     }
