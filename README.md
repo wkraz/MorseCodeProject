@@ -1,3 +1,5 @@
+# Morse Code Reader
+
 This is a project I created in EE10200. 
 
 In this project, I used the ELEGOO MEGA 2560 microcontroller to control my circuit. The goal of this project was to be able to read morse code inputs and translate them into words.
